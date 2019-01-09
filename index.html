@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Baltimore Maps</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
+  <script type="text/javascript" src="https://d3js.org/queue.v1.min.js"></script>
+  <!-- <script type="text/javascript" src="http://d3js.org/d3.v5.min.js"></script> -->
+  <!-- <script src="js/lib/d3.min.js"></script> -->
+  <!-- <script src="js/lib/d3-queue.min.js"></script> -->
+  <link   rel="stylesheet" type="text/css" href="css/main.css"/> 
+  <script type="text/javascript" src="https://d3js.org/topojson.v1.min.js"></script>
+  <script src="js/lib/plotly-latest.min.js"></script>
+  <!-- <script src="jquery-3.2.1.min.js"></script> -->
+  <!-- <script $(document).ready.$("body").hover(function(){setNames(0)})></script> -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+</head>
+
+<body>
+<div id="display" class="container-fluid">
+<div class="row" style="padding-top: 10px; padding-bottom: 10px">
+<div class="col-sm-6">
+  <h4 id="mapTitle" style="color: white"></h4>
+</div>
+<div class="col-sm-6">
+  <button class="btn btn-yellow" onclick="getNextMap('next')">Next data set</button>
+  <button class="btn btn-yellow" onclick="getNextMap('skip')">Data from next group</button>
+  <button class="btn btn-success" onclick="getScatterplot()" style="display: inline;" id="ScatterButton">Plots</button>
+  <button class="btn btn-success" onclick="getMap()" style="display: none;" id="MapButton">Maps</button>
+  <button class="btn btn-success" onclick="showHistogram()" style="display: none;" id="HistogramButton">Show histogram</button>
+  <div><h5 id="scatterHint" style="color: white; padding-bottom: 0px; margin-bottom: 0px"></h5></div>
+</div>
+</div>
+
+<div class="row">
+<div class="col-sm-6">
+  <article id="articleContainer" class="map">
+  </article>
+</div>
+
+<script>
+var savedMap
+
+var mapWidth = 0, mapHeight = 0;
+var width  = 480,
+    aspect = 1.3,
+    height = aspect * width,
+    legendWidth = 130;
+
+function getwh() {
+  mapWidth  = $('#articleContainer').width();
+  mapHeight = $('#articleContainer').height();
+  width  = mapWidth - legendWidth - 10;
+  height = aspect * width;
+  $('#pathContainer').width(width);
+  $('#pathContainer').outerHeight(height);
+  var scatterHint = $('#scatterHint').text();
+  if (scatterHint=='') {
+    $('.svgLegend').height(height);
+  } else {
+    getScatterplot();
+  }
+}
+
+function getNextMap(flag) {
+  var buttonOn = document.getElementsByClassName("buttonOn");                  // get the button that is currently on
+  var buttonK  = Number(buttonOn[0].id.slice(7,10));                           // get the button number (button ids start with "C")
+  if (flag=='next') {
+    buttonK++;                                                                 // get the next button
+    if (buttonK>=kmax) {buttonK=0;};                                           // if at end, go to beginning
+  } else if (flag=='skip') {
+    var numF = numFileK[buttonK] + 1;                                          // get the next file number
+    if (numF>=numFile) {numF=0;};                                              // if at end, go to beginning
+    buttonK = kFile[numF][0];                                                  // get the first k of the next file
+  }
+  let buttonText = "button" + buttonK;                                         // get the id
+  setNames(document.getElementById(buttonText),null);                          // display the map for the incremented button
+}
+
+function getMap() {
+  if (d3.select("svg#pathContainer").node()==null) {                           // if pathContainer is empty
+    var art = d3.select("article").node();                                     // get the article
+    art.innerHTML = savedMap;                                                  // put the saved map into the HTML
+    art.className = "map";                                                     // update the class name
+  }
+  let ks = getButtonKs();                                                      // get the on buttons
+  setNames(d3.select("button#Cbutton" + ks[0]).node(),null);                   // display the map for the button that is currently on
+  document.getElementById('MapButton').style.display = "none";
+  document.getElementById('HistogramButton').style.display = "none";
+  document.getElementById('ScatterButton').style.display = "inline";
+  $('#scatterHint').text("");
+  getwh();
+}
+
+function showHistogram() {
+  if ($('#HistogramButton').text().includes('No')) {
+    $('#HistogramButton').text('Show histogram');
+  } else {
+    $('#HistogramButton').text('No histogram');
+  }
+  getScatterplot();
+}
+
+function getScatterplot() {
+  $('#articleContainer').outerHeight(height);
+  var plotHistogram = false;
+  var data = [], traces = {}, layout = {};
+  if ($('#HistogramButton').text().includes('No')) {
+    plotHistogram = true;
+  };
+  if (d3.select("svg#pathContainer").node()!=null) {                           // if pathContainer is not empty
+    var art = d3.select("article").node();                                     // get the article
+    savedMap = art.innerHTML;                                                  // save the current HTML
+    art.className = "scatterplot";                                             // update the class name
+  }
+  d3.select("article").node().innerHTML = "";                                  // clear article space
+  let ks = getButtonKs();                                                      // get the on buttons
+  var x = baltimoreData[ks[0]];
+  var xaxis = baltimoreDescrButtons[ks[0]];
+
+  if (ks.length==1) {                                                          // if only one button is on
+    if (plotHistogram) {
+      traces = {
+        type: 'histogram',
+        x: x,
+      };
+      layout = {
+        xaxis: {
+          title: xaxis,
+          titlefont: {
+            color: '#0033cc',
+            size: 15,
+          },
+          rangemode: 'tozero',
+          zeroline: true,
+        },
+      };
+    } else {
+      traces = {                                                             // set the parameters of the data
+        type: 'bar',                                                             // bar chart
+        x: baltimoreNames,                                                       // neighborhood names
+        y: x,
+        marker: {
+          color: '#C8A2C8',
+          line: {
+            width: 2
+          }
+        }
+      };
+      layout = {
+        font: {
+          size: 10
+        },
+        margin: {
+          b: 190, // need room for CSA names
+        },
+      };
+    };
+    layout.title = baltimoreDescr[ks[0]];
+    layout.titlefont = {
+      size: 17,
+      color: '#0033cc',
+    }
+
+    data = [traces];
+
+    Plotly.newPlot("articleContainer", data, layout);
+
+  } else {
+
+    if (ks.length==2 && !plotHistogram) {
+      traces = {
+        type: 'scatter',
+        mode: 'markers',
+        x: x,
+        y: baltimoreData[ks[1]]
+      }
+      layout = {
+        title: baltimoreDescrButtons[ks[0]] + ' versus ' + baltimoreDescrButtons[ks[1]],
+        titlefont: {
+          size: 17,
+          color: '#0033cc',
+        },
+        xaxis: {
+          title: xaxis,
+          titlefont: {
+            color: '#0033cc',
+            size: 15,
+          },
+          rangemode: 'tozero',
+          zeroline: true,
+        },
+        yaxis: {
+          title: baltimoreDescrButtons[ks[1]],
+          titlefont: {
+            color: '#0033cc',
+            size: 15,
+          },
+          rangemode: 'tozero',
+          zeroline: true,
+        },
+      };
+      data = [traces];
+      Plotly.newPlot("articleContainer", data, layout)
+
+    } else {
+
+      var subplots = [];
+      var y = [], xtitle = '', ytitle = '', yaxis = '', xdomain = [], xaxislbl = '', yaxislbl = '';
+      var yaxisH = '', yaxislblH = '';
+      var nk = ks.length;
+      var layout = {
+        grid: {
+          rows: nk,
+          columns: nk,
+          // roworder: 'bottom to top',
+          // pattern: 'independent',
+        }
+      }
+      for (j=0; j<nk; j++) { // set y-axis properties
+        y = baltimoreData[ks[j]];
+        ytitle = baltimoreDescrButtons[ks[j]];
+        yaxisH = 'y10' + (j+1);
+        yaxislblH = 'yaxis10' + (j+1);
+        ydomain = [(j+0.1)/nk, (j+0.9)/nk];
+        subplots[j] = [];
+
+        for (i=0; i<nk; i++) { // set x-axis properties
+          ij = i + 1 + j*nk; // ranges from 1 to nk + (nk-1)*nk = nk*nk
+          x = baltimoreData[ks[i]];
+          xaxis = 'x' + ij;
+          yaxis = 'y' + ij;
+          xaxislbl = 'xaxis' + ij;
+          yaxislbl = 'yaxis' + ij;
+          xdomain = [(i+0.1)/nk, (i+0.9)/nk];
+          xtitle = baltimoreDescrButtons[ks[i]];
+
+          layout[xaxislbl] = {
+            domain: xdomain,
+            showgrid: true,
+            anchor: yaxis,
+            showticklabels: false,
+            rangemode: 'tozero',
+            zeroline: true,
+          };
+
+          layout[yaxislbl] = {
+            domain: ydomain,
+            showgrid: true,
+            anchor: xaxis,
+            showticklabels: false,
+            rangemode: 'tozero'
+          };
+
+          if (j==0) { // x-axis
+            layout[xaxislbl].showticklabels = true;
+            layout[xaxislbl].title = xtitle;
+            layout[xaxislbl].titlefont = {
+              color: '#0033cc',
+              size: 15,
+            };
+            if (i==1) {
+              layout[yaxislbl].showticklabels = true; // first scattergram on the bottom row
+            }
+          }
+          if (i==0) { // y-axis
+            layout[yaxislbl].title = ytitle;
+            layout[yaxislbl].titlefont = {
+              color: '#0033cc',
+              size: 15,
+            };
+            if (j>0) {
+              layout[yaxislbl].showticklabels = true; // scattergrams above the bottom row
+            }
+          }
+
+          if (i==j) {
+            traces = {
+              type: 'histogram',
+              x: x,
+              xaxis: xaxis,
+              yaxis: yaxisH,
+            };
+
+            layout[yaxislblH] = {
+              domain: ydomain,
+              showgrid: false,
+              showticklabels: false,
+              rangemode: 'tozero',
+              anchor: xaxis,
+            };
+            layout[xaxislbl].anchor = yaxisH;
+
+            subplots[j].push(xaxis + yaxisH);
+
+          } else {
+            traces = {
+              type: 'scatter',
+              mode: 'markers',
+              x: x,
+              y: y,
+              xaxis: xaxis,
+              yaxis: yaxis,
+            };            
+
+            subplots[j].push(xaxis + yaxis);
+          }
+
+          data.push(traces);
+        }
+      }
+      layout["showlegend"] = false;
+      layout.grid.subplots = subplots;
+      Plotly.newPlot("articleContainer", data, layout);
+    };
+  }
+  document.getElementById('MapButton').style.display = "inline";
+  document.getElementById('ScatterButton').style.display = "none";
+  document.getElementById('HistogramButton').style.display = "inline";
+  $('#scatterHint').text("Shift click for scatter plots");
+}
+
+var baltimoreData = [];
+var baltimoreNames = [];
+var baltimoreDescr = [];
+var baltimoreDescrButtons = [];
+var maps = [];
+
+var div = d3.select("body").append("div")   
+  .attr("class", "tooltip")               
+  .attr("id", "baltimoreMap")
+  .style("opacity", 0);
+
+var svg = d3.select("article").append("svg")
+  .attr("width", width)
+  // .attr("height", height)
+  .attr("id", "pathContainer")
+  .attr("class", "gContainer")
+  .style("margin", "1px auto");
+
+var mapTitle = document.getElementById("mapTitle");
+// mapTitle.width = width + legendWidth;                                     // add width
+
+let csaFileName = "csa_2010_boundaries/CSA_NSA_Tracts";                   // name of csa files
+
+var xhttp = new XMLHttpRequest();                                         // initialize a request object
+xhttp.onreadystatechange = function() {                                   // standard function for reading xml file
+  if (this.readyState == 4 && this.status == 200) {
+    document.getElementById("pathContainer").innerHTML = this.response;   // output the xml into the html location
+  }
+};
+xhttp.open("GET", csaFileName + ".svg", true);                            // make the open request asynchronous (true)
+xhttp.send();                                                             // send to htm
+
+let fileNames = ["Housing", "Arts", "Crime", "Education", "Health", "Sustainability", "Workforce","Staff-Number",'Staff-Salary'];
+fileNames.forEach(function(item) {
+  // d3.queue()
+  queue()
+    .defer(d3.csv, "data/VS15-" + item + ".csv")
+    .defer(d3.csv, csaFileName + ".csv")
+    .await(ready);
+})
+
+var color_min = [];
+var color_max = [];
+var kmax = 0;
+var numFile = 0;
+var kFile = [];
+var numFileK = [];
+
+function ready(error, data, names) {                             // data, names mapped to the files in the two defer commands
+  if (error) {console.log(error);}
+  let headRow  = data[0];                                        // header row in csv file
+  let dataCols = Object.keys(headRow);                           // headers
+  let baltimoreCols = dataCols.slice(1,dataCols.length);         // skip CSA2010 (community names)
+  names.forEach(function(dname,iname) {
+    data.forEach(function(d,i) {
+      if (d.CSA2010 == dname.Community) {
+        for (k0=0; k0<baltimoreCols.length; k0++) {
+          d_col = baltimoreCols[k0];
+          k = k0 + kmax;
+          if (iname==0) {                                        // initialize
+            color_min[k] =  Infinity;
+            color_max[k] = -Infinity;
+            baltimoreData[k] = [];
+            baltimoreDescr[k] = headRow[d_col];
+            baltimoreDescrButtons[k] = baltimoreCols[k0].replace("_15","").replace("15","").replace("XX","");
+          }
+          d_value = d[d_col];
+          d_value = d_value.replace("$","");
+          d_value = d_value.replace(/,/g,"");
+          d_value = +d_value;
+          baltimoreData[k][iname] = d_value;
+          if (k==0) {
+            baltimoreNames[iname] = dname.Community;
+          }
+          if (d_value < color_min[k]) {color_min[k] = d_value;}
+          if (d_value > color_max[k]) {color_max[k] = d_value;}    
+        }
+      }
+    });
+  });
+  var bContainer = document.getElementById("buttonContainer");  // span
+  var dContainer = document.getElementById("buttonDescriber");
+  var bNew, bCopy, node, dNew, td
+  var para = document.createElement("p")
+  var tbl  = document.createElement("table");                   // table
+  var tr   = document.createElement("tr");                      // table row
+  var th   = document.createElement("th");                      // table row
+  var text = document.createTextNode(fileNames[numFile]);       // text in paragraph
+  var pang = document.createElement("div");
+  var panh = document.createElement("div");
+  var panb = document.createElement("div");
+  var panG = document.createElement("div");
+  var panH = document.createElement("div");
+  var panB = document.createElement("div");
+  pang.setAttribute("class","panel-group");
+  panh.setAttribute("class","panel-heading");
+  panb.setAttribute("class","panel-body");
+  panG.setAttribute("class","panel-group");
+  panH.setAttribute("class","panel-heading");
+  panB.setAttribute("class","panel-body");
+  kFile[numFile] = [];
+  panh.appendChild(text);
+  pang.appendChild(panh);
+  panH.appendChild(text.cloneNode(true));
+  panG.appendChild(panH);
+
+  for (k0=0; k0<baltimoreCols.length; k0++) {
+    k = k0 + kmax;                                              // point to the beginning of the next set of buttons/descriptions
+    kFile[numFile].push(k);
+    numFileK.push(numFile);
+    maps[k] = {};
+    maps[k].mapMinValue = color_min[k];
+    maps[k].mapMaxValue = color_max[k];
+    maps[k].name = baltimoreCols[k0];
+    maps[k].description = baltimoreDescr[k];
+    bNew = document.createElement("button");                    // create button
+    bNew.setAttribute("onclick","setNames(this,event)");
+    bNew.setAttribute("class","buttonOff");
+    bNew.setAttribute("title",baltimoreDescr[k]);
+    bNew.setAttribute("id","button" + k);
+    node = document.createTextNode(baltimoreDescrButtons[k]);   // text for button
+    bNew.appendChild(node);                                     // insert text in button
+    tr   = document.createElement("tr");
+    td   = document.createElement("td");
+    bCopy = bNew.cloneNode(true);
+    bNew.setAttribute("id","button" + k);
+    bCopy.setAttribute("id","Cbutton" + k);
+    td.appendChild(bCopy);
+    tr.appendChild(td);
+    td   = document.createElement("td");
+    td.innerHTML = baltimoreDescr[k];
+    tr.appendChild(td);
+    panb.appendChild(bNew);
+    tbl.appendChild(tr);
+  }
+  pang.appendChild(panb);
+  bContainer.appendChild(pang);
+  panB.appendChild(tbl);
+  panG.appendChild(panB);
+  numFile += 1;
+  kmax += baltimoreCols.length;
+  dContainer.appendChild(panG);
+  let initialButton = document.getElementById("button0");
+  setNames(initialButton,null);
+}
+
+var paths
+
+function getButtonKs() {
+  var buttons = document.getElementsByClassName("buttonOn");
+  var ks = [];
+  for (i=0;i<buttons.length;i++) {
+    if (buttons[i].id.indexOf("C")!=0) {
+      ks.push(+buttons[i].id.slice(6));
+    }
+  };
+  console.log("getButtonKs: " + ks)
+  return ks;
+}
+
+function setNames(button,event) {                                    // generate map or scatterplot
+  var ls_w = 20, ls_h = 20;
+  var buttonStatus = "buttonOn";                                     // default button status
+  var art = document.getElementsByTagName("article")[0];             // first check if the article is a map
+  if (art.className=="map" || event==null || !event.shiftKey) {      // if it is a map or initialization or no shift key
+    d3.selectAll("button.buttonOn")                                  // turn off all buttons
+      .attr("class","buttonOff");
+  } else {
+    if (button.className.includes("buttonOn")) {                   // and if the button is already on
+      buttonStatus = "buttonOff";                                  // turn off the selected button        
+    }
+  };
+  button.setAttribute("class",buttonStatus)                          // turn on/off the selected button
+
+  var clonedButton                                                   // other button
+  if (button.id.indexOf("C")==0) {                                   // if the description button was selected
+    clonedButton = d3.select("button#" + button.id.slice(1));        // get the simple button
+  } else {
+    clonedButton = d3.select("button#C" + button.id)                 // otherwise get the description button
+  }
+  clonedButton.attr("class",buttonStatus);                           // turn on/off the other button
+  let ks = getButtonKs();                                            // get the button numbers
+
+  if (art.className=="map") {                                        // if map
+    var k = ks[0];
+    var svgContainer = document.getElementById("pathContainer");     // get the svg container
+    svgContainer.setAttribute("viewBox", "-20 80 900 900");          // set the viewbox
+    svgContainer.style["background-color"] = "rgb(240, 240, 240)";
+
+    mapTitle.textContent = baltimoreDescr[k];                        // insert text in title
+
+    legend.text("");                                                 // set up the legend, first by making sure the text is blank
+
+    legend.append("rect")
+      .attr("x", 10)
+      .attr("y", function(d, i){ return 300 - (i*ls_h) - 2*ls_h - 30;})
+      .attr("width", ls_w)
+      .attr("height", ls_h)
+      .style("fill", function(d, i) { return color(d);}) // use the user-defined d3 scale function, color()
+      .style("opacity", 0.8);
+
+    legend.append("text")                                            // svg <text> element
+      .attr("x", 40)
+      .attr("y", function(d, i){ return 300 - (i*ls_h) - ls_h - 4 - 30;})
+      .text(function(d, i){                                          // add text to the <text> element
+        let label_i = maps[k].mapMinValue + i/color_domain.length*(maps[k].mapMaxValue-maps[k].mapMinValue);
+        return label_i.toPrecision(3);
+      });
+
+    paths = d3.selectAll("path")                                     // get the svg xml container
+      .data(baltimoreNames)
+      .attr("name",function(d){return d})
+      .data(baltimoreData[k])
+      .style ("fill", function (d) {                                 // d only contains id and map properties
+        return color ((d - color_min[k])/(color_max[k]-color_min[k]+0.0001));
+      })
+      .attr("dataValue", function (d) {return d})
+
+      //Adding mouseevents
+
+      .on("mouseover", function(d) {
+        d3.select(this).transition().duration(300).style("opacity", 0.5); // 1
+        div.transition().duration(300)
+          .style("opacity", 1);
+        div.text(this.attributes.name.value + " : " + Number(this.attributes.dataValue.value).toFixed(3))
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY -30) + "px");
+      })
+
+      .on("mouseout", function() {
+        d3.select(this)
+          .transition().duration(300)
+          .style("opacity", 1);  // 0.8
+        div.transition().duration(300)
+          .style("opacity", 0);
+      });
+
+  } else {                                                           // if plot
+    let titles = baltimoreDescr[ks[0]];                              // start assembling list of titles
+    for (k=1; k<ks.length; k++) {
+      if (k==1) {
+        titles += ' [' + baltimoreDescrButtons[ks[0]] + ']';         // add abbreviation
+      }                                                              // then add other titles
+      titles += '<br>' + baltimoreDescr[ks[k]] + ' [' + baltimoreDescrButtons[ks[k]] + ']';
+    }
+    mapTitle.innerHTML = titles;                                     // insert text in title
+
+    getScatterplot();
+  }
+}
+
+</script>
+
+<div class="col-sm-4">
+<span id="buttonDescriber"></span>
+</div>
+<div class="col-sm-2">
+<span id="buttonContainer"></span>
+</div>
+
+</div>
+
+<script>
+var color_domain     = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+var ext_color_domain = [  0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+var legend_labels    = ["0.20", "0.22", "0.24", "0.26", "0.28", "0.30", "0.32", "0.34", "0.36", "0.38", "0.40"];
+var color = d3.scale.threshold() // function that assigns a color
+// var color = d3.scaleThreshold()
+  .domain(color_domain)
+  .range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00", "#08FF00", "#00FF2B"]);
+var legend
+
+var svgLegend = d3.select("article").append("svg")
+  .attr("width", legendWidth)
+  .attr("height", height)
+  .attr("x", 0)
+  .attr("class", "svgLegend")
+  .style("margin", "1px auto");
+
+legend = d3.select("svg.svgLegend").selectAll("g")                 // selectAll argument is same as append
+  .data(ext_color_domain)
+  .enter().append("g")
+  .attr("class", "legend");
+
+$(window).resize(function () {
+  getwh();
+})
+$(document).ready(function() {
+  getwh();
+})
+</script>
+</div>
+</body>
+</html>

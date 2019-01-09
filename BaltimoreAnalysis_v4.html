@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+  <script type="text/javascript" src="http://d3js.org/queue.v1.min.js"></script>
+  <link   rel="stylesheet" type="text/css" href="css/main.css"/> 
+  <script src="js/lib/plotly-latest.min.js"></script>
+  <!-- <script src="jquery-3.2.1.min.js"></script> -->
+  <!-- <script $(document).ready.$("body").hover(function(){setNames(0)})></script> -->
+</head>
+
+<body>
+<div id="display" class="container">
+<header>
+<button class="button" onclick="getScatterplot()">Scatterplot</button>
+<button class="button" onclick="getMap()">Map</button>
+</header>
+
+<article id="articleContainer" class="map">
+</article>
+
+<script>
+var savedMap
+
+function getMap() {
+  if (d3.select("svg#pathContainer").node()==null) {
+    var art = d3.select("article").node();
+    art.innerHTML = savedMap;
+    art.className = "map";
+  }
+  let ks = getButtonKs();
+  setNames(d3.select("button#Cbutton" + ks[0]).node(),null);
+}
+
+function getScatterplot() {
+  if (d3.select("svg#pathContainer").node()!=null) {
+    var art = d3.select("article").node();
+    savedMap = art.innerHTML;
+    art.className = "scatterplot";
+  }
+  d3.select("article").node().innerHTML = "";               // clear article space
+  let ks = getButtonKs();
+  if (ks.length==1) {
+    let k = ks[0];
+    var trace1 = {
+      type: 'bar',
+      x: baltimoreNames,
+      y: baltimoreData[k],
+      marker: {
+        color: '#C8A2C8',
+        line: {
+          width: 2
+        }
+      }
+    };
+    var data = [trace1];
+    var layout = {
+      title: baltimoreDescr[k],
+      font: {
+        size: 10
+      }
+    };
+
+    Plotly.newPlot("articleContainer", data, layout);
+  } else {
+    if (ks.length==2) {
+      let k0 = ks[0];
+      let k1 = ks[1];
+      var trace1 = {
+        type: 'scatter',
+        mode: 'markers',
+        x: baltimoreData[k0],
+        y: baltimoreData[k1]
+      }
+      var layout = {
+        title: baltimoreDescrButtons[k0] + ' versus ' + baltimoreDescrButtons[k1],
+        font: {
+          size: 14
+        }
+      };
+    };
+      var data = [trace1];
+      Plotly.newPlot("articleContainer", data, layout)
+  }
+}
+
+var baltimoreData = [];
+var baltimoreNames = [];
+var baltimoreDescr = [];
+var baltimoreDescrButtons = [];
+var maps = [];
+
+var width  = 600,
+    height = 787;
+
+var div = d3.select("body").append("div")   
+  .attr("class", "tooltip")               
+  .attr("id", "baltimoreMap")
+  .style("opacity", 0);
+
+var svg = d3.select("article").append("svg")
+  .attr("width", width)
+  .attr("height", height)
+  .attr("id", "pathContainer")
+  .attr("class", "gContainer")
+  .style("margin", "10px auto");
+
+let csaFileName = "csa_2010_boundaries/CSA_NSA_Tracts";                   // name of csa files
+
+var xhttp = new XMLHttpRequest();                                         // initialize a request object
+xhttp.onreadystatechange = function() {                                   // standard function for reading xml file
+  if (this.readyState == 4 && this.status == 200) {
+    document.getElementById("pathContainer").innerHTML = this.response;   // output the xml into the html location
+  }
+};
+xhttp.open("GET", csaFileName + ".svg", true);                            // make the open request asynchronous (true)
+xhttp.send();                                                             // send to htm
+
+let fileNames = ["Housing", "Arts", "Crime", "Education", "Health", "Sustainability", "Workforce"];
+fileNames.forEach(function(item) {
+  queue()
+    .defer(d3.csv, "data/VS15-" + item + ".csv")
+    .defer(d3.csv, csaFileName + ".csv")
+    .await(ready);
+})
+
+var color_min = [];
+var color_max = [];
+var kmax = 0;
+var numFile = 0;
+
+function ready(error, data, names) {
+  if (error) {console.log(error);}
+  let headRow  = data[0];                                        // header row in csv file
+  let dataCols = Object.keys(headRow);                           // headers
+  let baltimoreCols = dataCols.slice(1,dataCols.length);         // skip CSA2010 (community names)
+  names.forEach(function(dname,iname) {
+    data.forEach(function(d,i) {
+      if (d.CSA2010 == dname.Community) {
+        for (k0=0; k0<baltimoreCols.length; k0++) {
+          d_col = baltimoreCols[k0];
+          k = k0 + kmax;
+          if (iname==0) {                                        // initialize
+            color_min[k] =  Infinity;
+            color_max[k] = -Infinity;
+            baltimoreData[k] = [];
+            baltimoreDescr[k] = headRow[d_col];
+            baltimoreDescrButtons[k] = baltimoreCols[k0].replace("_15","").replace("15","").replace("XX","");
+          }
+          d_value = d[d_col];
+          d_value = d_value.replace("$","");
+          d_value = d_value.replace(/,/g,"");
+          d_value = +d_value;
+          baltimoreData[k][iname] = d_value;
+          if (k==0) {
+            baltimoreNames[iname] = dname.Community;
+          }
+          if (d_value < color_min[k]) {color_min[k] = d_value;}
+          if (d_value > color_max[k]) {color_max[k] = d_value;}    
+        }
+      }
+    });
+  });
+  var bContainer = document.getElementById("buttonContainer");  // span
+  var dContainer = document.getElementById("buttonDescriber");
+  var bNew, bCopy, node, dNew, td
+  var para = document.createElement("p")
+  var tbl  = document.createElement("table");                   // table
+  var tr   = document.createElement("tr");                      // table row
+  var th   = document.createElement("th");                      // table row
+  var text = document.createTextNode(fileNames[numFile]);       // text in paragraph
+  numFile += 1;
+  para.setAttribute("class","buttonPara");
+  para.appendChild(text);                                       // insert text in paragraph
+  th.appendChild(text.cloneNode(true));                         // insert text in table heading
+  tr.appendChild(th).setAttribute("colspan","2");               // insert table heading in table row
+  tbl.appendChild(tr);                                          // insert table row into table
+  bContainer.appendChild(para);                                 // insert paragraph in span
+
+  for (k0=0; k0<baltimoreCols.length; k0++) {
+    k = k0 + kmax;                                              // point to the beginning of the next set of buttons/descriptions
+    maps[k] = {};
+    maps[k].mapMinValue = color_min[k];
+    maps[k].mapMaxValue = color_max[k];
+    maps[k].name = baltimoreCols[k0];
+    maps[k].description = baltimoreDescr[k];
+    bNew = document.createElement("button");                    // create button
+    bNew.setAttribute("onclick","setNames(this,event)");
+    bNew.setAttribute("class","buttonOff");
+    bNew.setAttribute("title",baltimoreDescr[k]);
+    bNew.setAttribute("id","button" + k);
+    node = document.createTextNode(baltimoreDescrButtons[k]);   // text for button
+    bNew.appendChild(node);                                     // insert text in button
+    tr   = document.createElement("tr");
+    td   = document.createElement("td");
+    bCopy = bNew.cloneNode(true);
+    bNew.setAttribute("id","button" + k);
+    bCopy.setAttribute("id","Cbutton" + k);
+    td.appendChild(bCopy);
+    tr.appendChild(td);
+    td   = document.createElement("td");
+    td.innerHTML = baltimoreDescr[k];
+    tr.appendChild(td);
+    bContainer.appendChild(bNew);                               // insert button in span
+    tbl.appendChild(tr);
+    // dContainer.appendChild(bNew.cloneNode(true));
+  }
+  kmax += baltimoreCols.length;
+  dContainer.appendChild(tbl);
+  let initialButton = document.getElementById("button0");
+  setNames(initialButton,null);
+}
+
+var paths
+
+function getButtonKs() {
+  var buttons = document.getElementsByClassName("buttonOn");
+  var ks = [];
+  for (i=0;i<buttons.length;i++) {
+    if (buttons[i].id.indexOf("C")!=0) {
+      ks.push(+buttons[i].id.slice(6));
+    }
+  };
+  console.log("getButtonKs: " + ks)
+  return ks;
+}
+
+function setNames(button,event) {
+  var ls_w = 20, ls_h = 20;
+  var art = document.getElementsByTagName("article")[0];
+  if (art.className=="map" || event==null || !event.shiftKey) {
+    d3.selectAll("button.buttonOn")
+      .attr("class","buttonOff");
+  }
+  button.setAttribute("class","buttonOn")
+  var clonedButton
+  if (button.id.indexOf("C")==0) {
+    clonedButton = d3.select("button#" + button.id.slice(1));
+  } else {
+    clonedButton = d3.select("button#C" + button.id)
+  }
+  clonedButton.attr("class","buttonOn");
+
+  if (art.className=="map") {
+    let ks = getButtonKs();
+    k = ks[0];
+    var svgContainer = document.getElementById("pathContainer");
+    svgContainer.setAttribute("viewBox", "-20 120 900 900");
+
+    legend.text("");
+
+    legend.append("rect")
+      .attr("x", 40)
+      .attr("y", function(d, i){ return 300 - (i*ls_h) - 2*ls_h - 30;})
+      .attr("width", ls_w)
+      .attr("height", ls_h)
+      .style("fill", function(d, i) { return color(d);})
+      .style("opacity", 0.8);
+
+    legend.append("text")
+      .attr("x", 80)
+      .attr("y", function(d, i){ return 300 - (i*ls_h) - ls_h - 4 - 30;})
+      .text(function(d, i){
+        let label_i = maps[k].mapMinValue + i/color_domain.length*(maps[k].mapMaxValue-maps[k].mapMinValue);
+        return label_i.toFixed(2);
+      });
+
+    paths = d3.selectAll("path")                                       // get the svg xml container
+      .data(baltimoreNames)
+      .attr("name",function(d){return d})
+      .data(baltimoreData[k])
+      .style ("fill", function (d) {                // d only contains id and map properties
+        return color ((d - color_min[k])/(color_max[k]-color_min[k]+0.0001));
+      })
+      .attr("dataValue", function (d) {return d})
+
+      //Adding mouseevents
+
+      .on("mouseover", function(d) {
+        d3.select(this).transition().duration(300).style("opacity", 0.5); // 1
+        div.transition().duration(300)
+          .style("opacity", 1);
+        div.text(this.attributes.name.value + " : " + Number(this.attributes.dataValue.value).toFixed(3))
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY -30) + "px");
+      })
+
+      .on("mouseout", function() {
+        d3.select(this)
+          .transition().duration(300)
+          .style("opacity", 1);  // 0.8
+        div.transition().duration(300)
+          .style("opacity", 0);
+      });
+  } else {
+    getScatterplot();
+  }
+}
+
+</script>
+
+<aside>
+<span id="buttonContainer">
+</span>
+<span id="buttonDescriber">
+</span>
+<script>
+var color_domain     = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+var ext_color_domain = [  0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+var legend_labels    = ["0.20", "0.22", "0.24", "0.26", "0.28", "0.30", "0.32", "0.34", "0.36", "0.38", "0.40"];
+var color = d3.scale.threshold()
+  .domain(color_domain)
+  .range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00", "#08FF00", "#00FF2B"]);
+var legend
+
+// var svgLegend = d3.select("svg").append("svg")
+var svgLegend = d3.select("article").append("svg")
+  .attr("width", 200)
+  .attr("height", height)
+  .attr("x", 0)
+  .attr("class", "svgLegend")
+  .style("margin", "10px auto");
+
+legend = d3.select("svg.svgLegend").selectAll("g")                 // selectAll argument is same as append
+  .data(ext_color_domain)
+  .enter().append("g")
+  .attr("class", "legend");
+
+</script>
+</svg>
+</div>
+</body>
+</html>

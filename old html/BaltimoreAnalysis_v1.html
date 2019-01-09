@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="js/lib/jquery.js"></script>
+  <script type="text/javascript" src="js/lib/jquery.flot.js"></script>
+  <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+  <script type="text/javascript" src="http://d3js.org/queue.v1.min.js"></script>
+  <script type="text/javascript" src="http://d3js.org/topojson.v1.min.js"></script>
+  <script type="text/javascript" src="js/settings.js"></script>
+  <script type="text/javascript" src="js/lib/simple-slider.js"></script>
+  <link   rel="stylesheet" type="text/css" href="css/lib/simple-slider.css"/> 
+  <link   rel="stylesheet" type="text/css" href="css/main.css"/> 
+</head>
+
+<!-- <body onload="updateSlider()"> -->
+<body>
+<div id="content">
+  <div id="control">
+    <script type="text/javascript">
+        var upperSlider = 0;
+        var lowerSlider = 0;
+        sliderSetup(0,1)
+        console.log(sliders)
+    </script>
+  </div>
+</div>
+<span id="display">  </span>
+
+<script type="text/javascript">
+  update("index");                        // too early for updating, calls settings.js version of update
+
+  $("[data-slider]")
+    .each(function () {
+      var input = $(this);
+      $("<span>")
+        .addClass("output")
+        .insertAfter($(this));
+      console.log("$ data-slider")
+    })
+
+    .bind("slider:ready slider:changed", function (event, data) {
+      $(this)
+        .nextAll(".output:first")
+        .html(data.value.toFixed(3));
+    });
+</script>
+
+<object type = "image/svg+xml" data = "csa_2010_boundaries/CSA_NSA_Tracts.svg">
+</object>
+
+<script type="text/javascript">
+  var path = d3.geo.path()
+  var color_domain     = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+  var ext_color_domain = [  0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+  var legend_labels    = ["0.20", "0.22", "0.24", "0.26", "0.28", "0.30", "0.32", "0.34", "0.36", "0.38", "0.40"]
+  var color = d3.scale.threshold()
+    .domain(color_domain)
+    .range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00", "#08FF00", "#00FF2B"]);
+  var color_min = 0;
+  var color_max = 0;
+
+  var width  = 960,
+      height = 500;
+
+  var div = d3.select("body").append("div")   
+    .attr("class", "tooltip")               
+    .style("opacity", 0);
+
+  var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .style("margin", "10px auto");
+
+  var path = d3.geo.path()
+  var rateById = {};
+  var nameById = {};
+  // var ls_w = 20, ls_h = 20;   // unused
+
+
+      queue()
+        .defer(d3.csv, "csa_2010_boundaries/CSA_names.csv")
+        .await(ready); 
+
+ //Start of Choropleth drawing
+
+//  function ready(error, us, data) {
+  function ready(error, csa) {
+//      saveMapData(data)
+      // var slider = document.getElementById("inputLower");
+      // slider.setAttribute("value",map.mapMinValue);
+      // slider.setAttribute("data-slider-range",map.minValue + "," + map.maxValue); //midValue
+      // slider = document.getElementById("inputUpper")
+      // slider.setAttribute("value",map.mapMaxValue);
+      // slider.setAttribute("data-slider-range",map.minValue + "," + map.maxValue); //midValue
+      // update(NaN,"ready")
+
+    //Drawing Choropleth
+
+    // let baltimore_slice = baltimore.features.slice(0,1);   // get only the first elements
+    // let b = baltimore_slice[0].geometry.coordinates[0];
+    // for (i = 0; i < b.length; i++) {console.log(b[i][0] + " " + b[i][1])}
+    svg.append("g")
+      .attr("class", "region")
+      .attr("transform", "scale(0.5)")
+      .selectAll("path")
+//    .data(topojson.feature(us, us.objects.counties).features)
+//     us.objects.counties                          // Object{type:"GeometryCollection",geometries:Array[3213]}
+//     topojson.feature(us, us.objects.counties)    // Object{type:"FeatureCollection", features:  Array[3213]}
+//     topoj.features[0]                            // Object{type:"Feature", id:53073, geometry:Object}
+//     topoj.feagures[0].geometry                   // Object{type:"Polygon", coordinates:Array[1]}
+//     topoj.features[0].geometry.coordinates[0][0] // array of x,y coordinates
+//    .data(baltimore.geometries)
+//    .data(baltimore_slice)
+      // .data(baltimore.features)
+      // .enter().append("path")
+      // .attr("d", path)
+      // .style ( "fill" , function (d) {                // d only contains id and map properties
+      //   return color (0.5);
+      //   // return color ((rateById[d.id] - color_min)/(color_max-color_min+0.0001));
+      // })
+
+      .attr("name", function (d) {
+        return d.csa;
+      })    
+      // .style("opacity", 1.0)  // 0.8
+
+    //Adding mouseevents
+
+      // .on("mouseover", function(d) {
+      //   d3.select(this).transition().duration(300).style("opacity", 0.5); // 1
+      //   div.transition().duration(300)
+      //     .style("opacity", 1)
+      //   div.text(d.id + ", " + nameById[d.id] + " : " + Number(rateById[d.id]).toFixed(3))
+      //     .style("left", (d3.event.pageX) + "px")//
+      //     .style("top", (d3.event.pageY -30) + "px");
+      // })
+
+      // .on("mouseout", function() {
+      //   d3.select(this)
+      //     .transition().duration(300)
+      //     .style("opacity", 1);  // 0.8
+      //   div.transition().duration(300)
+      //     .style("opacity", 0);
+      // })
+  }; // <-- End of Choropleth drawing
+</script>

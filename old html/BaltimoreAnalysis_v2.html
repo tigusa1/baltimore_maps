@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+  <script type="text/javascript" src="http://d3js.org/queue.v1.min.js"></script>
+  <link   rel="stylesheet" type="text/css" href="css/main.css"/> 
+</head>
+
+<body>
+<div id="display" class="container">
+<header>
+  <button class="button" id="dataLoader" onclick="setNames()">Load the data</button>
+</header>
+
+<article>
+<script type="text/javascript">
+var baltimoreData = [];
+var baltimoreNames = [];
+var map = {mapName:"data", mapMinValue:NaN, mapMaxValue:NaN}
+
+var width  = 800,
+    height = 987;
+
+var div = d3.select("body").append("div")   
+  .attr("class", "tooltip")               
+  .attr("id", "baltimoreMap")
+  .style("opacity", 0);
+
+var svg = d3.select("article").append("svg")
+  .attr("width", width)
+  .attr("height", height)
+  .attr("id", "pathContainer")
+  .style("margin", "10px auto");
+
+let csaFileName = "csa_2010_boundaries/CSA_NSA_Tracts";                   // name of csa files
+
+var xhttp = new XMLHttpRequest();                                         // initialize a request object
+xhttp.onreadystatechange = function() {                                   // standard function for reading xml file
+  if (this.readyState == 4 && this.status == 200) {
+    console.log(this)
+    document.getElementById("pathContainer").innerHTML = this.response;   // output the xml into the html location
+
+    console.log("done with innerHTML")
+  }
+};
+xhttp.open("GET", csaFileName + ".svg", true);                            // make the open request asynchronous (true)
+xhttp.send();                                                             // send to htm
+svgXML = xhttp.response;
+
+queue()
+  .defer(d3.csv, "data/VS15_Housing.csv")
+  .defer(d3.csv, csaFileName + ".csv")
+  .await(ready)
+
+var color_min = 0;
+var color_max = 100;
+
+function ready(error, data, names) {
+  if (error) {console.log(error);}
+  color_min =  Infinity;
+  color_max = -Infinity;
+  names.forEach(function(dname,iname) {
+    data.forEach(function(d,i) {
+      if (d.CSA2010 == dname.Community) {
+        d_value = +d.shomes15;
+        baltimoreData[iname] = d_value;
+        baltimoreNames[iname] = dname.Community;
+        if (d_value < color_min) {color_min = d_value;}
+        if (d_value > color_max) {color_max = d_value;}    
+      }
+    })
+  map.mapMinValue = color_min;
+  map.mapMaxValue = color_max;
+  });
+}
+
+var paths
+
+function setNames() {
+  var ls_w = 20, ls_h = 20;
+  
+  var svgContainer = document.getElementById("pathContainer");
+  svgContainer.setAttribute("viewBox", "0 0 1200 1200");
+
+  legend.append("rect")
+    .attr("x", 40)
+    .attr("y", function(d, i){ return 300 - (i*ls_h) - 2*ls_h - 30;})
+    .attr("width", ls_w)
+    .attr("height", ls_h)
+    .style("fill", function(d, i) { return color(d); })
+    .style("opacity", 0.8);
+
+  legend.append("text")
+    .attr("x", 80)
+    .attr("y", function(d, i){ return 300 - (i*ls_h) - ls_h - 4 - 30;})
+    .text(function(d, i){
+      let label_i = map.mapMinValue + i/color_domain.length*(map.mapMaxValue-map.mapMinValue);
+      return label_i.toFixed(2);
+    });
+
+  paths = d3.selectAll("path")                                       // get the svg xml container
+    .data(baltimoreNames)
+    .attr("name",function(d){return d})
+    .data(baltimoreData)
+    .style ("fill", function (d) {                // d only contains id and map properties
+      return color ((d - color_min)/(color_max-color_min+0.0001));
+    })
+    .attr("dataValue", function (d) {return d})
+
+    //Adding mouseevents
+
+    .on("mouseover", function(d) {
+      d3.select(this).transition().duration(300).style("opacity", 0.5); // 1
+      div.transition().duration(300)
+        .style("opacity", 1)
+      div.text(this.attributes.name.value + " : " + Number(this.attributes.dataValue.value).toFixed(3))
+        .style("left", (d3.event.pageX) + "px")//
+        .style("top", (d3.event.pageY -30) + "px");
+    })
+
+    .on("mouseout", function() {
+      d3.select(this)
+        .transition().duration(300)
+        .style("opacity", 1);  // 0.8
+      div.transition().duration(300)
+        .style("opacity", 0);
+    })
+
+  console.log(paths)
+  console.log(paths[0][0])                                           // examine a path    
+}
+
+</script>
+</article>
+
+<aside>
+<script>
+var color_domain     = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+var ext_color_domain = [  0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+var legend_labels    = ["0.20", "0.22", "0.24", "0.26", "0.28", "0.30", "0.32", "0.34", "0.36", "0.38", "0.40"]
+var color = d3.scale.threshold()
+  .domain(color_domain)
+  .range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00", "#08FF00", "#00FF2B"]);
+var legend
+
+var svgLegend = d3.select("aside").append("svg")
+  .attr("width", width)
+  .attr("height", height)
+  .attr("class", "svgLegend")
+  .style("margin", "10px auto");
+
+legend = d3.select("svg.svgLegend").selectAll("g")                 // selectAll argument is same as append
+  .data(ext_color_domain)
+  .enter().append("g")
+  .attr("class", "legend");
+
+</script>
+</svg>
+</div>
+</body>
+</html>
