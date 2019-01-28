@@ -510,6 +510,11 @@ function setNames(button,event) {                                    // generate
   if (art.className=="map") {                                        // if map
     var k = ks[0];
     var svgContainer = document.getElementById("pathContainer");     // get the svg container
+    var map_min = maps[k].mapMinValue;
+    var map_max = maps[k].mapMaxValue;
+    var map_num_color = 10;
+    var map_increment = (map_max - map_min)/map_num_color;
+
     svgContainer.setAttribute("viewBox", "-20 80 900 900");          // set the viewbox
     svgContainer.style["background-color"] = "rgb(240, 240, 240)";
 
@@ -522,15 +527,22 @@ function setNames(button,event) {                                    // generate
       .attr("y", function(d, i){ return 300 - (i*ls_h) - 2*ls_h - 30;})
       .attr("width", ls_w)
       .attr("height", ls_h)
-      .style("fill", function(d, i) { return color(d);}) // use the user-defined d3 scale function, color()
+      .style("fill", function(d, i) {
+        return color(d - 0.001);                                    // d = 0.1,0.2,... and we want it slightly below the threshold
+      })                                                            // use the user-defined d3 scale function, color()
       .style("opacity", 0.8);
 
     legend.append("text")                                            // svg <text> element
       .attr("x", 40)
-      .attr("y", function(d, i){ return 300 - (i*ls_h) - ls_h - 4 - 30;})
+      .attr("y", function(d, i){ return 300 - (i*ls_h) - ls_h - 4 - 30 - 10;})
       .text(function(d, i){                                          // add text to the <text> element
-        let label_i = maps[k].mapMinValue + i/color_domain.length*(maps[k].mapMaxValue-maps[k].mapMinValue);
-        return label_i.toPrecision(3);
+        let label_i = map_min + (i+1)*map_increment;
+//      console.log('i = ' + i + ', label_i = ' + label_i);
+        if (numFileK[k]==7 || map_max>1000) {                        // 7 corresponds to Staff-Number
+          return Math.floor(label_i.toPrecision(3));
+        } else {
+          return label_i.toPrecision(3);
+        }
       });
 
     paths = d3.selectAll("path")                                     // get the svg xml container
@@ -538,7 +550,7 @@ function setNames(button,event) {                                    // generate
       .attr("name",function(d){return d})
       .data(baltimoreData[k])
       .style ("fill", function (d) {                                 // d only contains id and map properties
-        return color ((d - color_min[k])/(color_max[k]-color_min[k]+0.0001));
+        return color((d - color_min[k])/(color_max[k]-color_min[k]+0.0001));
       })
       .attr("dataValue", function (d) {return d})
 
@@ -587,13 +599,15 @@ function setNames(button,event) {                                    // generate
 </div>
 
 <script>
-var color_domain     = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-var ext_color_domain = [  0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-var legend_labels    = ["0.20", "0.22", "0.24", "0.26", "0.28", "0.30", "0.32", "0.34", "0.36", "0.38", "0.40"];
+var color_domain     = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
+// var color_domain     = [0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95];
+var ext_color_domain = [  0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+// var ext_color_domain = [  0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 var color = d3.scale.threshold() // function that assigns a color
 // var color = d3.scaleThreshold()
   .domain(color_domain)
-  .range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00", "#08FF00", "#00FF2B"]);
+  .range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00",            "#00FF2B"]);
+//.range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00", "#08FF00", "#00FF2B"]);
 var legend
 
 var svgLegend = d3.select("article").append("svg")
@@ -605,6 +619,7 @@ var svgLegend = d3.select("article").append("svg")
 
 legend = d3.select("svg.svgLegend").selectAll("g")                 // selectAll argument is same as append
   .data(ext_color_domain)
+//.data(color_domain)
   .enter().append("g")
   .attr("class", "legend");
 

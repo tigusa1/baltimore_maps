@@ -1,58 +1,1 @@
-CSA2010,Bargain,Sr_Admin,Sr_Appt,Sr_NonAd,Admin,NonAdmin
-Community Statistical Areas,BargainingUnit,SrStaff_Admin,SrStaff_Appt,SrStaff_NonAd,Staff_Admin,Staff_NonAdmin
-Allendale/Irvington/S. Hilton,6,4,0,1,19,5
-Beechfield/Ten Hills/West Hills,4,8,0,6,21,6
-Belair-Edison,20,7,0,2,55,16
-Brooklyn/Curtis Bay/Hawkins Point,1,0,0,0,4,1
-Canton,0,31,6,23,32,29
-Cedonia/Frankford,20,11,0,2,65,24
-Cherry Hill,2,0,0,0,4,0
-Chinquapin Park/Belvedere,4,7,0,6,25,4
-Claremont/Armistead,10,5,0,1,25,6
-Clifton-Berea,23,1,0,0,11,7
-Cross-Country/Cheswolde,1,14,0,8,26,15
-Dickeyville/Franklintown,1,1,0,1,9,0
-Dorchester/Ashburton,4,3,0,2,22,6
-Downtown/Seton Hill,2,25,2,31,24,43
-Edmondson Village,5,1,0,1,13,5
-Fells Point,3,62,20,39,44,57
-Forest Park/Walbrook,4,2,0,0,9,5
-Glen-Fallstaff,4,5,0,2,20,7
-Greater Charles Village/Barclay,9,49,2,41,92,99
-Greater Govans,10,10,0,5,32,15
-Greater Mondawmin,9,0,0,0,14,2
-Greater Roland Park/Poplar Hill,0,32,9,25,15,15
-Greater Rosemont,12,0,0,0,16,3
-Greenmount East,10,1,0,1,13,4
-Hamilton,4,18,1,8,49,17
-Harbor East/Little Italy,4,4,1,4,9,12
-Harford/Echodale,4,12,0,3,69,18
-Highlandtown,1,28,4,18,18,11
-Howard Park/West Arlington,6,1,0,2,10,2
-Inner Harbor/Federal Hill,3,23,2,17,20,19
-Lauraville,11,28,0,12,42,17
-Loch Raven,14,6,0,3,58,8
-Madison/East End,7,1,0,7,8,4
-Medfield/Hampden/Woodberry/Remington,14,114,11,34,129,39
-Midtown,2,51,6,49,81,86
-Midway/Coldstream,5,0,0,1,23,3
-Morrell Park/Violetville,2,2,0,1,5,1
-Mount Washington/Coldspring,0,30,3,20,21,9
-North Baltimore/Guilford/Homeland,1,57,9,31,36,44
-Northwood,11,17,0,5,48,9
-Oldtown/Middle East,7,11,1,29,16,38
-Orangeville/East Highlandtown,6,3,2,2,16,12
-Patterson Park North & East,14,39,6,40,43,48
-Penn North/Reservoir Hill,7,6,0,2,17,4
-Pimlico/Arlington/Hilltop,2,1,0,3,10,4
-Poppleton/The Terraces/Hollins Market,2,1,0,0,1,5
-Sandtown-Winchester/Harlem Park,12,1,0,0,8,3
-South Baltimore,0,21,2,12,11,8
-Southeastern,3,2,0,4,11,4
-Southern Park Heights,5,1,0,1,16,5
-Southwest Baltimore,10,3,0,0,11,6
-The Waverlies,9,16,0,3,20,12
-Upton/Druid Heights,4,0,1,2,6,3
-Washington Village/Pigtown,0,6,0,0,11,5
-Westport/Mount Winans/Lakeland,4,0,0,0,6,1
-Baltimore City,0,0,0,0,0,0
+CSA2010,Bargain,Sr_Admin,Sr_Appt,Sr_NonAd,Admin,NonAdmin,Total_StaffCommunity Statistical Areas,Number of Bargaining Unit Staff,Number of Senior Staff (Admin),Number of Senior Staff (Appt),Number of Senior Staff (Non-Admin),Number of Staff (Admin),Number of Staff (Non-Admin),Total Number of StaffAllendale/Irvington/S. Hilton,6,4,0,1,19,5,35Beechfield/Ten Hills/West Hills,4,8,0,6,21,6,45Belair-Edison,20,7,0,2,55,16,100Brooklyn/Curtis Bay/Hawkins Point,1,0,0,0,4,1,6Canton,0,31,6,23,32,29,121Cedonia/Frankford,20,11,0,2,65,24,122Cherry Hill,2,0,0,0,4,0,6Chinquapin Park/Belvedere,4,7,0,6,25,4,46Claremont/Armistead,10,5,0,1,25,6,47Clifton-Berea,23,1,0,0,11,7,42Cross-Country/Cheswolde,1,14,0,8,26,15,64Dickeyville/Franklintown,1,1,0,1,9,0,12Dorchester/Ashburton,4,3,0,2,22,6,37Downtown/Seton Hill,2,25,2,31,24,43,127Edmondson Village,5,1,0,1,13,5,25Fells Point,3,62,20,39,44,57,225Forest Park/Walbrook,4,2,0,0,9,5,20Glen-Fallstaff,4,5,0,2,20,7,38Greater Charles Village/Barclay,9,49,2,41,92,99,292Greater Govans,10,10,0,5,32,15,72Greater Mondawmin,9,0,0,0,14,2,25Greater Roland Park/Poplar Hill,0,32,9,25,15,15,96Greater Rosemont,12,0,0,0,16,3,31Greenmount East,10,1,0,1,13,4,29Hamilton,4,18,1,8,49,17,97Harbor East/Little Italy,4,4,1,4,9,12,34Harford/Echodale,4,12,0,3,69,18,106Highlandtown,1,28,4,18,18,11,80Howard Park/West Arlington,6,1,0,2,10,2,21Inner Harbor/Federal Hill,3,23,2,17,20,19,84Lauraville,11,28,0,12,42,17,110Loch Raven,14,6,0,3,58,8,89Madison/East End,7,1,0,7,8,4,27Medfield/Hampden/Woodberry/Remington,14,114,11,34,129,39,341Midtown,2,51,6,49,81,86,275Midway/Coldstream,5,0,0,1,23,3,32Morrell Park/Violetville,2,2,0,1,5,1,11Mount Washington/Coldspring,0,30,3,20,21,9,83North Baltimore/Guilford/Homeland,1,57,9,31,36,44,178Northwood,11,17,0,5,48,9,90Oldtown/Middle East,7,11,1,29,16,38,102Orangeville/East Highlandtown,6,3,2,2,16,12,41Patterson Park North & East,14,39,6,40,43,48,190Penn North/Reservoir Hill,7,6,0,2,17,4,36Pimlico/Arlington/Hilltop,2,1,0,3,10,4,20Poppleton/The Terraces/Hollins Market,2,1,0,0,1,5,9Sandtown-Winchester/Harlem Park,12,1,0,0,8,3,24South Baltimore,0,21,2,12,11,8,54Southeastern,3,2,0,4,11,4,24Southern Park Heights,5,1,0,1,16,5,28Southwest Baltimore,10,3,0,0,11,6,30The Waverlies,9,16,0,3,20,12,60Upton/Druid Heights,4,0,1,2,6,3,16Washington Village/Pigtown,0,6,0,0,11,5,22Westport/Mount Winans/Lakeland,4,0,0,0,6,1,11Baltimore City,0,0,0,0,0,0,0
