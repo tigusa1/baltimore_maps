@@ -86,6 +86,8 @@ function getMap() {
     var art = d3.select("article").node();                                     // get the article
     art.innerHTML = savedMap;                                                  // put the saved map into the HTML
     art.className = "map";                                                     // update the class name
+//  legend = d3.select('svg.svgLegend').selectAll('g');
+    setLegend(true);
   }
   let ks = getButtonKs();                                                      // get the on buttons
   setNames(d3.select("button#Cbutton" + ks[0]).node(),null);                   // display the map for the button that is currently on
@@ -356,24 +358,33 @@ xhttp.onreadystatechange = function() {                                   // sta
 xhttp.open("GET", csaFileName + ".svg", true);                            // make the open request asynchronous (true)
 xhttp.send();                                                             // send to htm
 
-let fileNames = ["Housing", "Arts", "Crime", "Education", "Health", "Sustainability", "Workforce","Staff-Number",'Staff-Salary'];
+let fileNames = ["Housing", "Arts", "Crime", "Education", "Health", "Sustainability", "Workforce","Staff-Number","Staff-Salary"];
+var numFile = 0;
+
 fileNames.forEach(function(item) {
   // d3.queue()
-  queue()
-    .defer(d3.csv, "data/VS15-" + item + ".csv")
+  var csvFileName = "data/VS15-" + item + ".csv";
+  queue(1)                                                                // concurrency = 1 (run in series, one at a time)
+    .defer(d3.csv, csvFileName)
     .defer(d3.csv, csaFileName + ".csv")
+    .defer(fileIndex, csvFileName, numFile++)
     .await(ready);
 })
+
+function fileIndex(name, numFile, callback) {                             // callback is always the last argument
+  callback(null,numFile);                                                 // callback(error,arg passed to ready)
+//console.log("reading file " + numFile + ": " + name);
+}
 
 var color_min = [];
 var color_max = [];
 var kmax = 0;
-var numFile = 0;
 var kFile = [];
 var numFileK = [];
 
-function ready(error, data, names) {                             // data, names mapped to the files in the two defer commands
+function ready(error, data, names, numFile) {                             // data, names mapped to the files in the two defer commands
   if (error) {console.log(error);}
+//console.log('procecessing file ' + numFile);
   let headRow  = data[0];                                        // header row in csv file
   let dataCols = Object.keys(headRow);                           // headers
   let baltimoreCols = dataCols.slice(1,dataCols.length);         // skip CSA2010 (community names)
@@ -600,14 +611,11 @@ function setNames(button,event) {                                    // generate
 
 <script>
 var color_domain     = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
-// var color_domain     = [0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95];
 var ext_color_domain = [  0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-// var ext_color_domain = [  0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 var color = d3.scale.threshold() // function that assigns a color
 // var color = d3.scaleThreshold()
   .domain(color_domain)
-  .range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00",            "#00FF2B"]);
-//.range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00", "#08FF00", "#00FF2B"]);
+  .range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00", "#00FF2B"]);
 var legend
 
 var svgLegend = d3.select("article").append("svg")
@@ -617,11 +625,19 @@ var svgLegend = d3.select("article").append("svg")
   .attr("class", "svgLegend")
   .style("margin", "1px auto");
 
-legend = d3.select("svg.svgLegend").selectAll("g")                 // selectAll argument is same as append
-  .data(ext_color_domain)
-//.data(color_domain)
-  .enter().append("g")
-  .attr("class", "legend");
+setLegend();
+
+function setLegend(initialized) {
+  if (initialized===undefined || initialized==false) {
+    legend = d3.select("svg.svgLegend").selectAll("g")                 // selectAll argument is same as append
+      .data(ext_color_domain)
+      .enter().append("g")
+      .attr("class", "legend");
+  } else {
+    legend = d3.select("svg.svgLegend").selectAll("g")                 // selectAll argument grabs the old "g"
+      .data(ext_color_domain)
+  }
+}
 
 $(window).resize(function () {
   getwh();
