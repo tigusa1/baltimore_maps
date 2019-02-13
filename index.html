@@ -23,10 +23,13 @@
 <body>
 <div id="display" class="container-fluid">
 <div class="row" style="padding-top: 10px; padding-bottom: 10px">
-<div class="col-sm-6">
-  <h4 id="mapTitle" style="color: white"></h4>
+<div class="col-sm-5" id="title0">
+  <h4 id="mapTitle0" style="color: white"></h4>
 </div>
-<div class="col-sm-6">
+<div class="col-sm-4" id="title1">
+  <h4 id="mapTitle1" style="color: white"></h4>
+</div>
+<div class="col-sm-3">
   <button class="btn btn-yellow" onclick="getNextMap('next')">Next data set</button>
   <button class="btn btn-yellow" onclick="getNextMap('skip')">Data from next group</button>
   <button class="btn btn-success" onclick="getScatterplot()" style="display: inline;" id="ScatterButton">Plots</button>
@@ -37,7 +40,7 @@
 </div>
 
 <div class="row">
-<div class="col-sm-6">
+<div class="col-sm-9">
   <article id="articleContainer" class="map">
   </article>
 </div>
@@ -54,21 +57,33 @@ var width  = 480,
 function getwh() {
   mapWidth  = $('#articleContainer').width();
   mapHeight = $('#articleContainer').height();
+  mapWidth  = mapWidth / 2;                                                    // use half of the container width
   width  = mapWidth - legendWidth - 10;
   height = aspect * width;
-  $('#pathContainer').width(width);
-  $('#pathContainer').outerHeight(height);
+  $('#pathContainer0').width(width);
+  $('#pathContainer1').width(width);
+  $('#pathContainer0').outerHeight(height);
+  $('#pathContainer1').outerHeight(height);
   var scatterHint = $('#scatterHint').text();
   if (scatterHint=='') {
-    $('.svgLegend').height(height);
+    $('#svgLegend0').height(height);
+    $('#svgLegend1').height(height);
   } else {
     getScatterplot();
   }
 }
 
-function getNextMap(flag) {
+function getNextMap(flag) {                                                    // only change the first button
   var buttonOn = document.getElementsByClassName("buttonOn");                  // get the button that is currently on
-  var buttonK  = Number(buttonOn[0].id.slice(7,10));                           // get the button number (button ids start with "C")
+  var buttonK0 = Number(buttonOn[0].id.slice(7,10));                           // get the button number (button ids start with "C")
+  var buttonK1 = buttonK0;
+  var buttonK  = buttonK0;
+  if (buttonOn.length>1) {
+    buttonK1 = Number(buttonOn[1].id.slice(7,10));                             // get the button number (button ids start with "C")
+  }
+  if (buttonK==Number(mapKleft)) {
+    buttonK=buttonK1;
+  }
   if (flag=='next') {
     buttonK++;                                                                 // get the next button
     if (buttonK>=kmax) {buttonK=0;};                                           // if at end, go to beginning
@@ -77,20 +92,23 @@ function getNextMap(flag) {
     if (numF>=numFile) {numF=0;};                                              // if at end, go to beginning
     buttonK = kFile[numF][0];                                                  // get the first k of the next file
   }
-  let buttonText = "button" + buttonK;                                         // get the id
+  let buttonText = "Cbutton" + buttonK;                                        // get the id
   setNames(document.getElementById(buttonText),null);                          // display the map for the incremented button
 }
 
-function getMap() {
-  if (d3.select("svg#pathContainer").node()==null) {                           // if pathContainer is empty
+function getMap(mapK=0) {
+//if (d3.select("svg#pathContainer0").node()==null) {                          // if pathContainer is empty
+  if (d3.select("svg#pathContainer" + mapK).node()==null) {                    // if pathContainer is empty
     var art = d3.select("article").node();                                     // get the article
     art.innerHTML = savedMap;                                                  // put the saved map into the HTML
     art.className = "map";                                                     // update the class name
 //  legend = d3.select('svg.svgLegend').selectAll('g');
-    setLegend(true);
+    setLegend(true,0);
+    setLegend(true,1);
   }
   let ks = getButtonKs();                                                      // get the on buttons
-  setNames(d3.select("button#Cbutton" + ks[0]).node(),null);                   // display the map for the button that is currently on
+  let kRL = kRightLeft(ks);  
+  setNames(d3.select("button#Cbutton" + kRL.right).node(),null);               // display the map for the button that is currently on
   document.getElementById('MapButton').style.display = "none";
   document.getElementById('HistogramButton').style.display = "none";
   document.getElementById('ScatterButton').style.display = "inline";
@@ -114,10 +132,13 @@ function getScatterplot() {
   if ($('#HistogramButton').text().includes('No')) {
     plotHistogram = true;
   };
-  if (d3.select("svg#pathContainer").node()!=null) {                           // if pathContainer is not empty
+  if (d3.select("svg#pathContainer0").node()!=null) {                          // if pathContainer is not empty
     var art = d3.select("article").node();                                     // get the article
     savedMap = art.innerHTML;                                                  // save the current HTML
     art.className = "scatterplot";                                             // update the class name
+    $('#title0').attr('class','col-sm-8');
+    $('#title1').attr('class','col-sm-1');
+    mapTitle[1].innerHTML = "";
   }
   d3.select("article").node().innerHTML = "";                                  // clear article space
   let ks = getButtonKs();                                                      // get the on buttons
@@ -324,9 +345,18 @@ function getScatterplot() {
   document.getElementById('ScatterButton').style.display = "none";
   document.getElementById('HistogramButton').style.display = "inline";
   $('#scatterHint').text("Shift click for scatter plots");
+
+  let titles = baltimoreDescr[ks[0]];                              // start assembling list of titles
+  for (k=1; k<ks.length; k++) {
+    if (k==1) {
+      titles += ' [' + baltimoreDescrButtons[ks[0]] + ']';         // add abbreviation
+    }                                                              // then add other titles
+    titles += '<br>' + baltimoreDescr[ks[k]] + ' [' + baltimoreDescrButtons[ks[k]] + ']';
+  }
+  mapTitle[0].innerHTML = titles;                                    // insert text in title
 }
 
-var baltimoreData = [];
+var baltimoreData  = [];
 var baltimoreNames = [];
 var baltimoreDescr = [];
 var baltimoreDescrButtons = [];
@@ -340,11 +370,13 @@ var div = d3.select("body").append("div")
 var svg = d3.select("article").append("svg")
   .attr("width", width)
   // .attr("height", height)
-  .attr("id", "pathContainer")
+  .attr("id", "pathContainer0")
   .attr("class", "gContainer")
   .style("margin", "1px auto");
 
-var mapTitle = document.getElementById("mapTitle");
+var mapTitle = [];
+mapTitle[0] = document.getElementById("mapTitle0");
+mapTitle[1] = document.getElementById("mapTitle1");
 // mapTitle.width = width + legendWidth;                                     // add width
 
 let csaFileName = "csa_2010_boundaries/CSA_NSA_Tracts";                   // name of csa files
@@ -352,7 +384,8 @@ let csaFileName = "csa_2010_boundaries/CSA_NSA_Tracts";                   // nam
 var xhttp = new XMLHttpRequest();                                         // initialize a request object
 xhttp.onreadystatechange = function() {                                   // standard function for reading xml file
   if (this.readyState == 4 && this.status == 200) {
-    document.getElementById("pathContainer").innerHTML = this.response;   // output the xml into the html location
+    document.getElementById("pathContainer0").innerHTML = this.response;  // output the xml into the html location
+    document.getElementById("pathContainer1").innerHTML = this.response;  // output the xml into the html location
   }
 };
 xhttp.open("GET", csaFileName + ".svg", true);                            // make the open request asynchronous (true)
@@ -362,18 +395,21 @@ let fileNames = ["Housing", "Arts", "Crime", "Education", "Health", "Sustainabil
 var numFile = 0;
 
 fileNames.forEach(function(item) {
-  // d3.queue()
+  setTimeout(function () {d3Queue(item);},1000);
+})
+
+function d3Queue(item) {
   var csvFileName = "data/VS15-" + item + ".csv";
   queue(1)                                                                // concurrency = 1 (run in series, one at a time)
     .defer(d3.csv, csvFileName)
     .defer(d3.csv, csaFileName + ".csv")
     .defer(fileIndex, csvFileName, numFile++)
     .await(ready);
-})
+}
 
 function fileIndex(name, numFile, callback) {                             // callback is always the last argument
   callback(null,numFile);                                                 // callback(error,arg passed to ready)
-//console.log("reading file " + numFile + ": " + name);
+  console.log("reading file " + numFile + ": " + name);
 }
 
 var color_min = [];
@@ -477,133 +513,171 @@ function ready(error, data, names, numFile) {                             // dat
   numFile += 1;
   kmax += baltimoreCols.length;
   dContainer.appendChild(panG);
-  let initialButton = document.getElementById("button0");
-  setNames(initialButton,null);
+  let initialButton = document.getElementById("Cbutton0");
+//initialButton.setAttribute("class","buttonOn"); // not necessary, because setNames will set buttonOn
+  setNames(initialButton,null,true);
 }
 
 var paths
+var mapKleft = 0;
 
 function getButtonKs() {
   var buttons = document.getElementsByClassName("buttonOn");
   var ks = [];
   for (i=0;i<buttons.length;i++) {
-    if (buttons[i].id.indexOf("C")!=0) {
-      ks.push(+buttons[i].id.slice(6));
-    }
+    ks.push(+buttons[i].id.slice(7));                                // use C buttons
+    // if (buttons[i].id.indexOf("C")!=0) {
+    //   ks.push(+buttons[i].id.slice(6));
+    // }
   };
   console.log("getButtonKs: " + ks)
   return ks;
 }
 
-function setNames(button,event) {                                    // generate map or scatterplot
+// initialize as left plot and right plot: leftPlot=true
+// , regular click changes right, shift-click changes left
+function setNames(button,event,leftPlot=false) {                    // generate map or scatterplot
+  console.log('setNames: ' + button.id + ', ' + button.className);
   var ls_w = 20, ls_h = 20;
   var buttonStatus = "buttonOn";                                     // default button status
   var art = document.getElementsByTagName("article")[0];             // first check if the article is a map
-  if (art.className=="map" || event==null || !event.shiftKey) {      // if it is a map or initialization or no shift key
-    d3.selectAll("button.buttonOn")                                  // turn off all buttons
-      .attr("class","buttonOff");
-  } else {
-    if (button.className.includes("buttonOn")) {                   // and if the button is already on
-      buttonStatus = "buttonOff";                                  // turn off the selected button        
-    }
-  };
-  button.setAttribute("class",buttonStatus)                          // turn on/off the selected button
+  var notShiftKey = (event==null || !event.shiftKey);
+  var shiftKey = !notShiftKey;
 
-  var clonedButton                                                   // other button
-  if (button.id.indexOf("C")==0) {                                   // if the description button was selected
-    clonedButton = d3.select("button#" + button.id.slice(1));        // get the simple button
+  if (art.className!=="map") {
+    if (notShiftKey) {
+      d3.selectAll("button.buttonOn")                                  // turn off all buttons
+        .attr("class","buttonOff");
+    } else {
+      if (button.className.includes("buttonOn")) {                     // and if the button is already on
+        buttonStatus = "buttonOff";                                    // turn off the selected button        
+      }
+    }
+    button.setAttribute("class",buttonStatus);                         // turn on/off the selected button
   } else {
-    clonedButton = d3.select("button#C" + button.id)                 // otherwise get the description button
+    if (notShiftKey) {
+      d3.selectAll("button.buttonOn")                                  // turn off all buttons
+        .attr("class","buttonOff");
+      d3.select("button#Cbutton" + mapKleft)
+        .attr("class","buttonOn");                                     // keep the left map button on
+      button.setAttribute("class","buttonOn");                         // turn on the selected button
+    } else {
+      d3.select("button#Cbutton" + mapKleft)
+        .attr("class","buttonOff");                                    // turn off old left map button
+      mapKleft = button.id.slice(7);
+      button.setAttribute("class","buttonOn");                         // turn on new left map button
+    }
   }
-  clonedButton.attr("class",buttonStatus);                           // turn on/off the other button
+
+  // var clonedButton                                                   // other button
+  // if (button.id.indexOf("C")==0) {                                   // if the description button was selected
+  //   clonedButton = d3.select("button#" + button.id.slice(1));        // get the simple button
+  // } else {
+  //   clonedButton = d3.select("button#C" + button.id)                 // otherwise get the description button
+  // }
+  // clonedButton.attr("class",buttonStatus);                           // turn on/off the other button
   let ks = getButtonKs();                                            // get the button numbers
 
   if (art.className=="map") {                                        // if map
-    var k = ks[0];
-    var svgContainer = document.getElementById("pathContainer");     // get the svg container
-    var map_min = maps[k].mapMinValue;
-    var map_max = maps[k].mapMaxValue;
-    var map_num_color = 10;
-    var map_increment = (map_max - map_min)/map_num_color;
-
-    svgContainer.setAttribute("viewBox", "-20 80 900 900");          // set the viewbox
-    svgContainer.style["background-color"] = "rgb(240, 240, 240)";
-
-    mapTitle.textContent = baltimoreDescr[k];                        // insert text in title
-
-    legend.text("");                                                 // set up the legend, first by making sure the text is blank
-
-    legend.append("rect")
-      .attr("x", 10)
-      .attr("y", function(d, i){ return 300 - (i*ls_h) - 2*ls_h - 30;})
-      .attr("width", ls_w)
-      .attr("height", ls_h)
-      .style("fill", function(d, i) {
-        return color(d - 0.001);                                    // d = 0.1,0.2,... and we want it slightly below the threshold
-      })                                                            // use the user-defined d3 scale function, color()
-      .style("opacity", 0.8);
-
-    legend.append("text")                                            // svg <text> element
-      .attr("x", 40)
-      .attr("y", function(d, i){ return 300 - (i*ls_h) - ls_h - 4 - 30 - 10;})
-      .text(function(d, i){                                          // add text to the <text> element
-        let label_i = map_min + (i+1)*map_increment;
-//      console.log('i = ' + i + ', label_i = ' + label_i);
-        if (numFileK[k]==7 || map_max>1000) {                        // 7 corresponds to Staff-Number
-          return Math.floor(label_i.toPrecision(3));
-        } else {
-          return label_i.toPrecision(3);
-        }
-      });
-
-    paths = d3.selectAll("path")                                     // get the svg xml container
-      .data(baltimoreNames)
-      .attr("name",function(d){return d})
-      .data(baltimoreData[k])
-      .style ("fill", function (d) {                                 // d only contains id and map properties
-        return color((d - color_min[k])/(color_max[k]-color_min[k]+0.0001));
-      })
-      .attr("dataValue", function (d) {return d})
-
-      //Adding mouseevents
-
-      .on("mouseover", function(d) {
-        d3.select(this).transition().duration(300).style("opacity", 0.5); // 1
-        div.transition().duration(300)
-          .style("opacity", 1);
-        div.text(this.attributes.name.value + " : " + Number(this.attributes.dataValue.value).toFixed(3))
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY -30) + "px");
-      })
-
-      .on("mouseout", function() {
-        d3.select(this)
-          .transition().duration(300)
-          .style("opacity", 1);  // 0.8
-        div.transition().duration(300)
-          .style("opacity", 0);
-      });
-
+    $('#title0').attr('class','col-sm-5');
+    $('#title1').attr('class','col-sm-4');
+    let kRL = kRightLeft(ks);
+    var svgContainer = document.getElementById("pathContainer0");     // get the svg container
+    drawMap(svgContainer,kRL.left, ls_h,ls_w,0);
+    var svgContainer = document.getElementById("pathContainer1");     // get the svg container
+    drawMap(svgContainer,kRL.right,ls_h,ls_w,1);
   } else {                                                           // if plot
-    let titles = baltimoreDescr[ks[0]];                              // start assembling list of titles
-    for (k=1; k<ks.length; k++) {
-      if (k==1) {
-        titles += ' [' + baltimoreDescrButtons[ks[0]] + ']';         // add abbreviation
-      }                                                              // then add other titles
-      titles += '<br>' + baltimoreDescr[ks[k]] + ' [' + baltimoreDescrButtons[ks[k]] + ']';
-    }
-    mapTitle.innerHTML = titles;                                     // insert text in title
-
     getScatterplot();
   }
 }
 
+function kRightLeft(ks) {
+  var k0 = mapKleft;
+  var k1 = ks[0];
+  if (k1==mapKleft && ks.length>1) {
+    k1 = ks[1];
+  } 
+  var kRL = {
+    left: k0,
+    right: k1
+  }; 
+  return kRL;
+}
+
+function drawMap(svgContainer,k,ls_h,ls_w,mapK) {
+  var map_min = maps[k].mapMinValue;
+  var map_max = maps[k].mapMaxValue;
+  var map_num_color = 10;
+  var map_increment = (map_max - map_min)/map_num_color;
+
+  svgContainer.setAttribute("viewBox", "-20 80 900 900");          // set the viewbox
+  svgContainer.style["background-color"] = "rgb(240, 240, 240)";
+
+  mapTitle[mapK].textContent = baltimoreDescr[k];                        // insert text in title
+
+  legend[mapK].text("");                                                 // set up the legend, first by making sure the text is blank
+
+  legend[mapK].append("rect")
+    .attr("x", 10)
+    .attr("y", function(d, i){ return 300 - (i*ls_h) - 2*ls_h - 30;})
+    .attr("width", ls_w)
+    .attr("height", ls_h)
+    .style("fill", function(d, i) {
+      return color(d - 0.001);                                    // d = 0.1,0.2,... and we want it slightly below the threshold
+    })                                                            // use the user-defined d3 scale function, color()
+    .style("opacity", 0.8);
+
+  legend[mapK].append("text")                                            // svg <text> element
+    .attr("x", 40)
+    .attr("y", function(d, i){ return 300 - (i*ls_h) - ls_h - 4 - 30 - 10;})
+    .text(function(d, i){                                          // add text to the <text> element
+      let label_i = map_min + (i+1)*map_increment;
+//      console.log('i = ' + i + ', label_i = ' + label_i);
+      if (numFileK[k]==7 || map_max>1000) {                        // 7 corresponds to Staff-Number
+        return Math.floor(label_i.toPrecision(3));
+      } else {
+        return label_i.toPrecision(3);
+      }
+    });
+
+  var bNames = baltimoreNames.concat(baltimoreNames);
+  var bData  = baltimoreData[k].concat(baltimoreData[k]);
+  paths = d3.selectAll("path")                                     // get the svg xml container
+    .data(bNames)
+    .attr("name",function(d){return d})
+    .data(bData)
+    .style ("fill", function (d) {                                 // d only contains id and map properties
+      return color((d - color_min[k])/(color_max[k]-color_min[k]+0.0001));
+    })
+    .attr("dataValue", function (d) {return d})
+
+    //Adding mouseevents
+
+    .on("mouseover", function(d) {
+      d3.select(this).transition().duration(300).style("opacity", 0.5); // 1
+      div.transition().duration(300)
+        .style("opacity", 1);
+      div.text(this.attributes.name.value + " : " + Number(this.attributes.dataValue.value).toFixed(3))
+        .style("left", (d3.event.pageX) + "px")
+        .style("top", (d3.event.pageY -30) + "px");
+    })
+
+    .on("mouseout", function() {
+      d3.select(this)
+        .transition().duration(300)
+        .style("opacity", 1);  // 0.8
+      div.transition().duration(300)
+        .style("opacity", 0);
+    });
+}
+
 </script>
 
-<div class="col-sm-4">
+<div class="col-sm-3">
 <span id="buttonDescriber"></span>
 </div>
-<div class="col-sm-2">
+<!-- <div class="col-sm-1"> -->
+<div style="display: none;">
 <span id="buttonContainer"></span>
 </div>
 
@@ -616,25 +690,42 @@ var color = d3.scale.threshold() // function that assigns a color
 // var color = d3.scaleThreshold()
   .domain(color_domain)
   .range(["#FF2B00", "#FF5E00", "#FF9100", "#FFC400", "#FFF700", "#D5FF00", "#A2FF00", "#6FFF00", "#3CFF00", "#00FF2B"]);
-var legend
+var legend = [];
 
 var svgLegend = d3.select("article").append("svg")
   .attr("width", legendWidth)
   .attr("height", height)
   .attr("x", 0)
-  .attr("class", "svgLegend")
+  .attr("id", "svgLegend0")
+  .attr("class","svgLegend")
   .style("margin", "1px auto");
 
-setLegend();
+svg = d3.select("article").append("svg")
+  .attr("width", width)
+  // .attr("height", height)
+  .attr("id", "pathContainer1")
+  .attr("class", "gContainer")
+  .style("margin", "1px auto");
 
-function setLegend(initialized) {
+svgLegend = d3.select("article").append("svg")
+  .attr("width", legendWidth)
+  .attr("height", height)
+  .attr("x", 0)
+  .attr("id", "svgLegend1")
+  .attr("class","svgLegend")
+  .style("margin", "1px auto");
+
+setLegend(false,0);
+setLegend(false,1);
+
+function setLegend(initialized,mapK) {
   if (initialized===undefined || initialized==false) {
-    legend = d3.select("svg.svgLegend").selectAll("g")                 // selectAll argument is same as append
+    legend[mapK] = d3.select("svg#svgLegend" + mapK).selectAll("g")                 // selectAll argument is same as append
       .data(ext_color_domain)
       .enter().append("g")
       .attr("class", "legend");
   } else {
-    legend = d3.select("svg.svgLegend").selectAll("g")                 // selectAll argument grabs the old "g"
+    legend[mapK] = d3.select("svg#svgLegend" + mapK).selectAll("g")                 // selectAll argument grabs the old "g"
       .data(ext_color_domain)
   }
 }
