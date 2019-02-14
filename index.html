@@ -33,9 +33,10 @@
   <button class="btn btn-yellow" onclick="getNextMap('next')">Next data set</button>
   <button class="btn btn-yellow" onclick="getNextMap('skip')">Data from next group</button>
   <button class="btn btn-success" onclick="getScatterplot()" style="display: inline;" id="ScatterButton">Plots</button>
+  <button class="btn btn-success" onclick="setLeftPlot()" style="display: none;" id="LeftPlotButton">Left plot</button>
   <button class="btn btn-success" onclick="getMap()" style="display: none;" id="MapButton">Maps</button>
   <button class="btn btn-success" onclick="showHistogram()" style="display: none;" id="HistogramButton">Show histogram</button>
-  <div><h5 id="scatterHint" style="color: white; padding-bottom: 0px; margin-bottom: 0px"></h5></div>
+  <div><h5 id="scatterHint" style="color: white; padding-bottom: 0px; margin-bottom: 0px">Shift click for left map</h5></div>
 </div>
 </div>
 
@@ -65,7 +66,7 @@ function getwh() {
   $('#pathContainer0').outerHeight(height);
   $('#pathContainer1').outerHeight(height);
   var scatterHint = $('#scatterHint').text();
-  if (scatterHint=='') {
+  if (scatterHint.includes('left')) {
     $('#svgLegend0').height(height);
     $('#svgLegend1').height(height);
   } else {
@@ -112,7 +113,7 @@ function getMap(mapK=0) {
   document.getElementById('MapButton').style.display = "none";
   document.getElementById('HistogramButton').style.display = "none";
   document.getElementById('ScatterButton').style.display = "inline";
-  $('#scatterHint').text("");
+  $('#scatterHint').text("Shift click for left map");
   getwh();
 }
 
@@ -393,19 +394,23 @@ xhttp.send();                                                             // sen
 
 let fileNames = ["Housing", "Arts", "Crime", "Education", "Health", "Sustainability", "Workforce","Staff-Number","Staff-Salary"];
 var numFile = 0;
+var q = queue();
 
+q.defer(d3.csv, csaFileName + ".csv");                                    // get the file names
 fileNames.forEach(function(item) {
-  setTimeout(function () {d3Queue(item);},1000);
+  var csvFileName = "data/VS15-" + item + ".csv";
+  q.defer(d3.csv, csvFileName);
+  q.defer(fileIndex, csvFileName, numFile++);
 })
 
-function d3Queue(item) {
-  var csvFileName = "data/VS15-" + item + ".csv";
-  queue(1)                                                                // concurrency = 1 (run in series, one at a time)
-    .defer(d3.csv, csvFileName)
-    .defer(d3.csv, csaFileName + ".csv")
-    .defer(fileIndex, csvFileName, numFile++)
-    .await(ready);
-}
+q.awaitAll(function (err,results) {
+  var names = results[0];
+  for (iFile=0; iFile<numFile; iFile++) {
+    ready(err,results[2*iFile+1],names,results[2*iFile+2]);
+  }
+  let initialButton = document.getElementById("Cbutton0");
+  setNames(initialButton,null,true);
+})
 
 function fileIndex(name, numFile, callback) {                             // callback is always the last argument
   callback(null,numFile);                                                 // callback(error,arg passed to ready)
@@ -513,9 +518,6 @@ function ready(error, data, names, numFile) {                             // dat
   numFile += 1;
   kmax += baltimoreCols.length;
   dContainer.appendChild(panG);
-  let initialButton = document.getElementById("Cbutton0");
-//initialButton.setAttribute("class","buttonOn"); // not necessary, because setNames will set buttonOn
-  setNames(initialButton,null,true);
 }
 
 var paths
@@ -533,6 +535,11 @@ function getButtonKs() {
   console.log("getButtonKs: " + ks)
   return ks;
 }
+
+function setLeftPlot() {
+
+}
+
 
 // initialize as left plot and right plot: leftPlot=true
 // , regular click changes right, shift-click changes left
@@ -583,9 +590,10 @@ function setNames(button,event,leftPlot=false) {                    // generate 
     $('#title1').attr('class','col-sm-4');
     let kRL = kRightLeft(ks);
     var svgContainer = document.getElementById("pathContainer0");     // get the svg container
-    drawMap(svgContainer,kRL.left, ls_h,ls_w,0);
+    prepareMap(svgContainer,kRL.left, ls_h,ls_w,0);
     var svgContainer = document.getElementById("pathContainer1");     // get the svg container
-    drawMap(svgContainer,kRL.right,ls_h,ls_w,1);
+    prepareMap(svgContainer,kRL.right,ls_h,ls_w,1);
+    drawMap(kRL);
   } else {                                                           // if plot
     getScatterplot();
   }
@@ -604,7 +612,7 @@ function kRightLeft(ks) {
   return kRL;
 }
 
-function drawMap(svgContainer,k,ls_h,ls_w,mapK) {
+function prepareMap(svgContainer,k,ls_h,ls_w,mapK) {
   var map_min = maps[k].mapMinValue;
   var map_max = maps[k].mapMaxValue;
   var map_num_color = 10;
@@ -633,20 +641,30 @@ function drawMap(svgContainer,k,ls_h,ls_w,mapK) {
     .text(function(d, i){                                          // add text to the <text> element
       let label_i = map_min + (i+1)*map_increment;
 //      console.log('i = ' + i + ', label_i = ' + label_i);
-      if (numFileK[k]==7 || map_max>1000) {                        // 7 corresponds to Staff-Number
+      if (numFileK[k]==7 || map_max>1000) {                              // 7 corresponds to Staff-Number
         return Math.floor(label_i.toPrecision(3));
       } else {
         return label_i.toPrecision(3);
       }
     });
 
+}
+
+function drawMap(kRL) {
   var bNames = baltimoreNames.concat(baltimoreNames);
-  var bData  = baltimoreData[k].concat(baltimoreData[k]);
+  var bData  = baltimoreData[kRL.left].concat(baltimoreData[kRL.right]);
+  var numData= baltimoreNames.length;
   paths = d3.selectAll("path")                                     // get the svg xml container
     .data(bNames)
     .attr("name",function(d){return d})
     .data(bData)
-    .style ("fill", function (d) {                                 // d only contains id and map properties
+    .style ("fill", function (d,i) {                               // d only contains id and map properties
+      let k;
+      if (i<numData) {
+        k = kRL.left;
+      } else {
+        k = kRL.right;
+      };
       return color((d - color_min[k])/(color_max[k]-color_min[k]+0.0001));
     })
     .attr("dataValue", function (d) {return d})
